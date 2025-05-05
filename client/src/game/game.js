@@ -2,6 +2,7 @@
 
 import Phaser from "phaser";
 import playerImage from "./../assets/player.png"
+import npc1 from "./../assets/NPC.png"; //NPC
 import outdoor from "./../assets/tilemaps/battle-royale1.json";
 import outdoorImage from "./../assets/tilemaps/battle-royale.png";
 import bulletImage from "./../assets/bullet.png";
@@ -51,6 +52,7 @@ export default class Game extends Phaser.Scene {
         this.load.tilemapTiledJSON("map", outdoor);
         this.load.image('player', playerImage);
         this.load.image('bullet', bulletImage);
+        this.load.image('npc',npc1);//npc 
     }
 
     create() {
@@ -91,6 +93,22 @@ export default class Game extends Phaser.Scene {
         }).setScrollFactor(0).setDepth(10);
 
         this.cursors = this.input.keyboard.createCursorKeys();
+
+        // this.anims.create({
+        //     key: 'NPCLeft',
+        //     frames: this.anims.generateFrameNames('npc', {
+        //         prefix: 'skeleton-walk-left/',
+        //         suffix: '',
+        //         start: 1,
+        //         end: 3,
+        //         zeroPad: 2
+        //     }),
+        //     frameRate: 10,
+        //     repeat: -1
+        // });
+
+        
+        this.add.sprite(280, 200, 'npc')//npc
     }
 
     connect() {
@@ -216,6 +234,8 @@ export default class Game extends Phaser.Scene {
         this.room.onError.add(() => {
             alert(room.sessionId + " couldn't join " + room.name);
         });
+
+
 
     }
 
