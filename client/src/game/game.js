@@ -2,7 +2,7 @@
 
 import Phaser from "phaser";
 import playerImage from "./../assets/player.png"
-import npc1 from "./../assets/NPC.png"; //NPC
+import npc1 from "./../assets/npc.png"; //NPC
 import outdoor from "./../assets/tilemaps/battle-royale1.json";
 import outdoorImage from "./../assets/tilemaps/battle-royale.png";
 import bulletImage from "./../assets/bullet.png";
