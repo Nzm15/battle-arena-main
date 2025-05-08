@@ -40,7 +40,10 @@ export default class Game extends Phaser.Scene {
         this.map;
         this.bulletSound = null;
         this.backgroundMusic = null;
-
+        this.npc = null;
+        this.interactKey = null;
+        this.interactText = null;
+        this.isNearNPC = false;
         this.closingMessage = "You have been disconnected from the server";
 
     }
@@ -92,7 +95,13 @@ export default class Game extends Phaser.Scene {
             },
         }).setScrollFactor(0).setDepth(10);
 
-        this.cursors = this.input.keyboard.createCursorKeys();
+        // Replace the cursors creation with WASD keys
+        this.cursors = {
+            up: this.input.keyboard.addKey('W'),
+            down: this.input.keyboard.addKey('S'),
+            left: this.input.keyboard.addKey('A'),
+            right: this.input.keyboard.addKey('D')
+        };
 
         // this.anims.create({
         //     key: 'NPCLeft',
@@ -107,8 +116,19 @@ export default class Game extends Phaser.Scene {
         //     repeat: -1
         // });
 
+        this.npc = this.physics.add.sprite(280, 200, 'npc');
+        this.npc.setImmovable(true);
+
+        this.interactKey = this.input.keyboard.addKey('E');
         
-        this.add.sprite(280, 200, 'npc')//npc
+        // Add interaction text (hidden by default)
+        this.interactText = this.add.text(0, 0, 'Press E to interact', {
+            font: "16px monospace",
+            fill: "#ffffff"
+        });
+        this.interactText.setVisible(false);
+        this.interactText.setScrollFactor(0);
+        
     }
 
     connect() {
@@ -256,6 +276,30 @@ export default class Game extends Phaser.Scene {
         if (this.player) {
             this.player.sprite.setVelocity(0);
 
+            const distance = Phaser.Math.Distance.Between(
+                this.player.sprite.x, this.player.sprite.y,
+                this.npc.x, this.npc.y
+            );
+
+            if (distance < 100) {
+                if (!this.isNearNPC) {
+                    this.isNearNPC = true;
+                    this.interactText.setVisible(true);
+                }
+                
+                if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+                    this.showDialog([
+                        "Hello There!!!",
+                        "I heard you want to challenge me in the Mathematics quiz.",
+                        "For your information, I've never been defeated.",
+                        "GOODLUCK!!!"
+                    ]);
+                }
+            } else if (this.isNearNPC) {
+                this.isNearNPC = false;
+                this.interactText.setVisible(false);
+            }
+
             if (this.cursors.left.isDown) {
                 this.rotatePlayer();
                 this.player.sprite.setVelocityX(-300);
@@ -314,6 +358,37 @@ export default class Game extends Phaser.Scene {
             }
         }
 
+    }
+
+    showDialog(messages) {
+        const dialogBox = this.add.graphics();
+        dialogBox.fillStyle(0x000000, 0.7);
+        dialogBox.fillRect(50, 400, 700, 150);
+        
+        const dialogText = this.add.text(70, 420, messages[0], {
+            font: "18px monospace",
+            fill: "#ffffff",
+            wordWrap: { width: 660 }
+        });
+        dialogText.setScrollFactor(0);
+        
+        let messageIndex = 0;
+        const closeDialog = () => {
+            dialogBox.destroy();
+            dialogText.destroy();
+            this.input.keyboard.off('keydown-SPACE', handleNextMessage);
+        };
+        
+        const handleNextMessage = () => {
+            messageIndex++;
+            if (messageIndex < messages.length) {
+                dialogText.setText(messages[messageIndex]);
+            } else {
+                closeDialog();
+            }
+        };
+        
+        this.input.keyboard.on('keydown-SPACE', handleNextMessage);
     }
 
     addPlayer(data) {
