@@ -1,9 +1,3 @@
-To run this game, u need to do this 3 step:
-1) npm install --save-dev webpack webpack-cli
-2) npm run build (if u made any changes in this game, if not then u can just skip this step)
-3) npm run start:server
-
-
 # Battle-arena
 Battle royale game for the real ones. Built with Phaser 3 and Colyseus, Battle arena - battefield honor is a survival game in its epiphany which brings players in unkown locations of a map together and force them to fight for thier survival. It came form the concept of popular games such as [Fortnite](https://fr.wikipedia.org/wiki/Fortnite) or [Pubg](https://fr.wikipedia.org/wiki/PlayerUnknown%27s_Battlegrounds) 
 
