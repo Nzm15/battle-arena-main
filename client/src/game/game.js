@@ -2,7 +2,8 @@
 
 import Phaser from "phaser";
 import playerImage from "./../assets/player.png"
-import npc1 from "./../assets/npc2.png"; //NPC
+import npc1 from "./../assets/skeleton.png";
+import npc1m from "./../assets/skeleton.json";
 import outdoor from "./../assets/tilemaps/battle-royale1.json";
 import outdoorImage from "./../assets/tilemaps/battle-royale.png";
 import bulletImage from "./../assets/bullet.png";
@@ -55,34 +56,50 @@ export default class Game extends Phaser.Scene {
         this.load.tilemapTiledJSON("map", outdoor);
         this.load.image('player', playerImage);
         this.load.image('bullet', bulletImage);
-        this.load.image('npc',npc1);//npc 
+        this.load.image('npc', npc1);
+        this.load.atlas('skeleton', npc1, npc1m);  // Load skeleton sprite atlas
     }
 
     create() {
 
+        // Create audio but don't play it yet
         this.backgroundMusic = this.sound.add('backgroundMusic');
-        this.backgroundMusic.setLoop(true).play();
-
+        this.backgroundMusic.setLoop(true);
         this.bulletSound = this.sound.add('bulletSound');
+
+        // Add a click handler to start audio
+        this.input.once('pointerdown', () => {
+            if (this.sound.context.state === 'suspended') {
+                this.sound.context.resume();
+            }
+            this.backgroundMusic.play();
+        });
 
         this.input.setDefaultCursor(`url('${cursorImage}'), crosshair`);
         this.map = this.make.tilemap({
             key: "map"
         });
 
-
         const tileset = this.map.addTilesetImage("battle-royale", "tiles");
-        const floorLayer = this.map.createStaticLayer("floor", tileset, 0, 0);
-        //const herbeLayer = this.map.createStaticLayer("herbe", tileset, 0, 0);
-        this.map["blockLayer"] = this.map.createStaticLayer("block", tileset, 0, 0);
-        //this.map["wallLayer"] = this.map.createStaticLayer("wall", tileset, 0, 0);
+        
+        // Replace createStaticLayer with createLayer
+        const floorLayer = this.map.createLayer("floor", tileset, 0, 0);
+        //const herbeLayer = this.map.createLayer("herbe", tileset, 0, 0);
+        this.map["blockLayer"] = this.map.createLayer("block", tileset, 0, 0);
+        //this.map["wallLayer"] = this.map.createLayer("wall", tileset, 0, 0);
         this.map["blockLayer"].setCollisionByProperty({
             collide: true
         });
 
 
+        // After setting world bounds - modify camera settings
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
         this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+
+        // Simplify camera settings - remove lerp and deadzone for now
+        this.cameras.main.setZoom(1);
+        // this.cameras.main.setLerp(0.1, 0.1);
+        // this.cameras.main.setDeadzone(50, 50);
 
         this.connect();
 
@@ -103,21 +120,75 @@ export default class Game extends Phaser.Scene {
             right: this.input.keyboard.addKey('D')
         };
 
-        // this.anims.create({
-        //     key: 'NPCLeft',
-        //     frames: this.anims.generateFrameNames('npc', {
-        //         prefix: 'skeleton-walk-left/',
-        //         suffix: '',
-        //         start: 1,
-        //         end: 3,
-        //         zeroPad: 2
-        //     }),
-        //     frameRate: 10,
-        //     repeat: -1
-        // });
+        // Create skeleton animations
+        const animFrameRate = 4;
+        this.anims.create({
+            key: 'skeleton-left',
+            frames: this.anims.generateFrameNames('skeleton', {
+                prefix: 'skeleton-walk-left/',
+                start: 1,
+                end: 3,
+                zeroPad: 2
+            }),
+            frameRate: animFrameRate,
+            repeat: -1
+        });
 
-        this.npc = this.physics.add.sprite(280, 200, 'npc');
-        this.npc.setImmovable(true);
+        this.anims.create({
+            key: 'skeleton-right',
+            frames: this.anims.generateFrameNames('skeleton', {
+                prefix: 'skeleton-walk-right/',
+                start: 1,
+                end: 3,
+                zeroPad: 2
+            }),
+            frameRate: animFrameRate,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'skeleton-up',
+            frames: this.anims.generateFrameNames('skeleton', {
+                prefix: 'skeleton-walk-up/',
+                start: 1,
+                end: 3,
+                zeroPad: 2
+            }),
+            frameRate: animFrameRate,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'skeleton-down',
+            frames: this.anims.generateFrameNames('skeleton', {
+                prefix: 'skeleton-walk-down/',
+                start: 1,
+                end: 3,
+                zeroPad: 2
+            }),
+            frameRate: animFrameRate,
+            repeat: -1
+        });
+
+        // Create NPC with animations
+        // After creating NPC sprite
+        this.npc = this.physics.add.sprite(280, 200, 'skeleton');
+        this.npc.setImmovable(false); // Allow movement
+        this.npc.play('skeleton-down');
+        
+        // Add collider with block layer
+        this.physics.add.collider(this.npc, this.map["blockLayer"]);
+        
+        // Add NPC movement properties
+        this.npc.moveTimer = 0;
+        this.npc.speed = 100;
+        this.npc.currentDirection = 'down';
+        
+        // Set movement boundaries (1/4 of map size)
+        this.npc.bounds = {
+            x: this.map.widthInPixels / 4,
+            y: this.map.heightInPixels / 4
+        };
 
         this.interactKey = this.input.keyboard.addKey('E');
         
@@ -251,8 +322,10 @@ export default class Game extends Phaser.Scene {
             }
         });
 
+        // In connect() method
         this.room.onError.add(() => {
-            alert(room.sessionId + " couldn't join " + room.name);
+        // Fix: use this.room instead of room
+        alert(this.room.sessionId + " couldn't join " + this.room.name);
         });
 
 
@@ -260,11 +333,19 @@ export default class Game extends Phaser.Scene {
     }
 
     update() {
+        // Add debug at beginning of update
+        if (!this._debugTextAdded && this.map) {
+            console.log("Game is updating, map dimensions:", this.map.widthInPixels, this.map.heightInPixels);
+            this._debugTextAdded = true;
+        }
+        
+        this.updateNPCMovement();
 
         for (let id in this.players) {
             let p = this.players[id].sprite;
             p.x += ((p.target_x || p.x) - p.x) * 0.5;
-            p.y += ((p.target_y || p.x) - p.y) * 0.5;
+            // Fix: p.target_y instead of p.target_x
+            p.y += ((p.target_y || p.y) - p.y) * 0.5;  // Was using p.x instead of p.y
             // Intepolate angle while avoiding the positive/negative issue 
             let angle = p.target_rotation || p.rotation;
             let dir = (angle - p.rotation) / (Math.PI * 2);
@@ -399,10 +480,16 @@ export default class Game extends Phaser.Scene {
             this.player = {};
             this.player.sprite = sprite;
             this.player.sprite.setCollideWorldBounds(true);
+            
+            // Make sure camera follows player immediately
             this.cameras.main.startFollow(this.player.sprite);
+            
+            // Add debug text to verify player creation
+            console.log("Player created at", data.x, data.y);
+            
             this.physics.add.collider(this.player.sprite, this.map["blockLayer"]);
-
-        } else {
+        }
+        else {
             this.players[id] = {};
             this.players[id].sprite = sprite;
             this.players[id].sprite.setTint("0xff0000");
@@ -424,6 +511,45 @@ export default class Game extends Phaser.Scene {
     removeBullet(index) {
         this.bullets[index].destroy();
         delete this.bullets[index];
+    }
+
+    updateNPCMovement() {
+        // Add safety check
+        if (!this.npc || !this.game || !this.game.loop) return;
+        
+        this.npc.moveTimer += this.game.loop.delta;
+        
+        // Change direction every 2 seconds or when hitting bounds
+        if (this.npc.moveTimer >= 2000 || 
+            this.npc.x <= 0 || this.npc.x >= this.npc.bounds.x || 
+            this.npc.y <= 0 || this.npc.y >= this.npc.bounds.y) {
+            
+            this.npc.moveTimer = 0;
+            
+            // Random direction (up, down, left, right)
+            const directions = ['up', 'down', 'left', 'right'];
+            this.npc.currentDirection = directions[Math.floor(Math.random() * directions.length)];
+            
+            // Set velocity and animation based on direction
+            switch(this.npc.currentDirection) {
+                case 'left':
+                    this.npc.setVelocity(-this.npc.speed, 0);
+                    this.npc.play('skeleton-left', true);
+                    break;
+                case 'right':
+                    this.npc.setVelocity(this.npc.speed, 0);
+                    this.npc.play('skeleton-right', true);
+                    break;
+                case 'up':
+                    this.npc.setVelocity(0, -this.npc.speed);
+                    this.npc.play('skeleton-up', true);
+                    break;
+                case 'down':
+                    this.npc.setVelocity(0, this.npc.speed);
+                    this.npc.play('skeleton-down', true);
+                    break;
+            }
+        }
     }
 
 }
