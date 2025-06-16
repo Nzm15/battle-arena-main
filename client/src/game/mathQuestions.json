@@ -1,0 +1,57 @@
+{
+  "questions": [
+    {
+      "type": "addition",
+      "template": "What is {a} + {b}?",
+      "ranges": {
+        "a": [1, 20],
+        "b": [1, 20]
+      }
+    },
+    {
+      "type": "subtraction",
+      "template": "What is {a} - {b}?",
+      "ranges": {
+        "a": [10, 30],
+        "b": [1, 10]
+      }
+    },
+    {
+      "type": "multiplication",
+      "template": "What is {a} × {b}?",
+      "ranges": {
+        "a": [1, 10],
+        "b": [1, 10]
+      }
+    },
+    {
+      "type": "word_problem",
+      "template": "If you have {a} items and give away {b}, how many do you have left?",
+      "ranges": {
+        "a": [10, 30],
+        "b": [1, 10]
+      },
+      "operation": "subtraction"
+    },
+    {
+      "type": "complex",
+      "template": "What is {a} + {b} - {c}?",
+      "ranges": {
+        "a": [1, 20],
+        "b": [1, 20],
+        "c": [1, 10]
+      },
+      "operation": "addition_subtraction"
+    },
+    {
+      "type": "complex",
+      "template": "What is {a} × {b} + {c}?",
+      "ranges": {
+        "a": [1, 10],
+        "b": [1, 10],
+        "c": [1, 20]
+      },
+      "operation": "multiplication_addition"
+    }
+  ]
+}
