@@ -9,6 +9,7 @@ class Player extends Schema {}
 type("number")(Player.prototype, "x");
 type("number")(Player.prototype, "y");
 type("number")(Player.prototype, "rotation");
+type("boolean")(Player.prototype, "reviving"); // Add this line
 
 class Bullet extends Schema {}
 type("number")(Bullet.prototype, "x");
@@ -139,15 +140,45 @@ exports.outdoor = class extends colyseus.Room {
 
             case "move":
                 if (this.state.getPlayer(client.sessionId) == undefined) return;
+                if (this.state.getPlayer(client.sessionId).reviving) return; // ADD THIS
                 this.state.movePlayer(client.sessionId, message.data);
                 break;
 
             case "shoot_bullet":
                 if (this.state.getPlayer(client.sessionId) == undefined) return;
+                if (this.state.getPlayer(client.sessionId).reviving) return; // ADD THIS
                 if (Math.abs(message.data.speed_x) <= 100 && Math.abs(message.data.speed_y) <= 100) {
                     this.state.createBullet(client.sessionId, message.data);
                 }
                 break;
+
+            case "player_revived":
+                // Re-add player to state
+                if (!this.state.getPlayer(message.data.id)) {
+                    this.state.createPlayer(message.data.id);
+                }
+                this.state.setPlayerPosition(message.data.id, {
+                    x: message.data.x,
+                    y: message.data.y
+                });
+                this.state.players[message.data.id].rotation = message.data.rotation || 0;
+
+                // Notify all clients
+                this.broadcast({
+                    event: "player_revived",
+                    id: message.data.id,
+                    position: { x: message.data.x, y: message.data.y }
+                });
+                break;
+
+            case "revived":
+                if (this.state.getPlayer(client.sessionId) == undefined) return;
+                this.state.getPlayer(client.sessionId).reviving = false;
+            break;
+
+            case "dead":
+                this.state.removePlayer(client.sessionId);
+            break;
 
             default:
                 break;
@@ -176,13 +207,13 @@ exports.outdoor = class extends colyseus.Room {
                         let dy = this.state.players[id].y - this.state.bullets[i].y;
                         let dist = Math.sqrt(dx * dx + dy * dy);
                         if (dist < 30) {
-                            this.broadcast( {
+                            this.broadcast({
                                 event: "hit",
                                 punished_id: id,
                                 punisher_id: this.state.bullets[i].owner_id
                             });
                             this.state.removeBullet(i);
-                            this.state.removePlayer(id);
+                            this.state.players[id].reviving = true; // ADD THIS LINE
                             return;
                         }
                     }
